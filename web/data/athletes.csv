@@ -1,0 +1,21 @@
+id,first_name,last_name,display_name,sport,is_professional,is_nickname
+1,Rasheed,Wallace,Rasheed Wallace,Basketball,true,false
+2,Walter,Payton,Walter Payton,Football,true,false
+3,Serena,Williams,Serena Williams,Tennis,true,false
+4,Wayne,Gretzky,Wayne Gretzky,Hockey,true,false
+5,Giannis,Antetokounmpo,Giannis Antetokounmpo,Basketball,true,false
+6,Alex,Rodriguez,Alex Rodriguez,Baseball,true,false
+7,Roger,Federer,Roger Federer,Tennis,true,false
+8,Freddie,Freeman,Freddie Freeman,Baseball,true,false
+9,Floyd,Mayweather,Floyd Mayweather,Boxing,true,false
+10,Mia,Hamm,Mia Hamm,Soccer,true,false
+11,Hank,Aaron,Hank Aaron,Baseball,true,false
+12,Aaron,Rodgers,Aaron Rodgers,Football,true,false
+13,Rafael,Nadal,Rafael Nadal,Tennis,true,false
+14,Naomi,Osaka,Naomi Osaka,Tennis,true,false
+15,Oscar,Robertson,Oscar Robertson,Basketball,true,false
+16,Reggie,Jackson,Reggie Jackson,Baseball,true,false
+17,Jackie,Robinson,Jackie Robinson,Baseball,true,false
+18,Russell,Wilson,Russell Wilson,Football,true,false
+19,Wilt,Chamberlain,Wilt Chamberlain,Basketball,true,false
+20,Cristiano,Ronaldo,Cristiano Ronaldo,Soccer,true,false
