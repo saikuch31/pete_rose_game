@@ -39,6 +39,24 @@ describe("AthleteCatalog", () => {
     assert.equal(catalog.toSubmission("Unknown Person"), null);
   });
 
+  it("returns a random athlete from the catalog", () => {
+    const catalog = AthleteCatalog.fromCsv(csv);
+    const athlete = catalog.random();
+    assert.ok(catalog.athletes.includes(athlete));
+  });
+
+  it("finds a close fuzzy match for a misspelled athlete name", () => {
+    const catalog = AthleteCatalog.fromCsv(csv);
+    const athlete = catalog.findClosest("Wilt Chamberlen", "W");
+    assert.equal(athlete?.displayName, "Wilt Chamberlain");
+  });
+
+  it("does not fuzzy match across the wrong required letter", () => {
+    const catalog = AthleteCatalog.fromCsv(csv);
+    const athlete = catalog.findClosest("Wilt Chamberlen", "R");
+    assert.equal(athlete, null);
+  });
+
   it("suggests only after a complete first name and narrows by full-name prefix", () => {
     const catalog = AthleteCatalog.fromCsv(csv);
     assert.deepEqual(catalog.suggest("Way", "W"), []);

@@ -10,12 +10,21 @@ const pro = (firstName: string, lastName: string) => ({
 });
 
 describe("createGame", () => {
-  it("starts with Pete Rose used and requires R", () => {
+  it("starts with the supplied seed athlete and uses their last-name initial", () => {
+    const state = createGame(["A", "B"], {
+      seedAthlete: { firstName: "Walter", lastName: "Payton" },
+    });
+    assert.equal(state.requiredLetter, "P");
+    assert.equal(state.seedAthlete.key, "walter payton");
+    assert.equal(state.usedAthletes[0].key, "walter payton");
+    assert.equal(state.players[0].lives, 3);
+    assert.equal(state.turnSeconds, 30);
+  });
+
+  it("defaults to Pete Rose when no seed athlete is provided", () => {
     const state = createGame(["A", "B"]);
     assert.equal(state.requiredLetter, "R");
     assert.equal(state.usedAthletes[0].key, "pete rose");
-    assert.equal(state.players[0].lives, 3);
-    assert.equal(state.turnSeconds, 30);
   });
 
   it("requires at least two players and valid settings", () => {
@@ -24,6 +33,10 @@ describe("createGame", () => {
     assert.throws(
       () => createGame(["A", "B"], { turnSeconds: 1.5 }),
       /Turn time/,
+    );
+    assert.throws(
+      () => createGame(["A", "B"], { seedAthlete: { firstName: "Pete", lastName: "" } }),
+      /Seed athlete/,
     );
   });
 });

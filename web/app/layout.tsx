@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pete Rose — The Athlete Name Game",
+  title: "Name Game",
 };
 
 export default function RootLayout({

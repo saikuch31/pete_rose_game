@@ -30,6 +30,7 @@ export interface UsedAthlete extends Athlete {
 export interface GameState {
   players: Player[];
   currentPlayerIndex: number;
+  seedAthlete: UsedAthlete;
   requiredLetter: string;
   direction: Direction;
   usedAthletes: UsedAthlete[];
@@ -70,9 +71,8 @@ export type TurnResult =
 export interface GameOptions {
   lives?: number;
   turnSeconds?: number;
+  seedAthlete?: Athlete;
 }
-
-const SEED_ATHLETE: Athlete = { firstName: "Pete", lastName: "Rose" };
 
 export function createGame(
   playerNames: readonly string[],
@@ -96,6 +96,14 @@ export function createGame(
     throw new Error("Turn time must be a positive integer.");
   }
 
+  const seedAthlete = sanitizeAthlete(
+    options.seedAthlete ?? { firstName: "Pete", lastName: "Rose" },
+  );
+  if (!seedAthlete.firstName || !seedAthlete.lastName) {
+    throw new Error("Seed athlete must include both a first and last name.");
+  }
+  const usedSeedAthlete = toUsedAthlete(seedAthlete);
+
   return {
     players: names.map((name, index) => ({
       id: `player-${index + 1}`,
@@ -104,9 +112,10 @@ export function createGame(
       eliminated: false,
     })),
     currentPlayerIndex: 0,
-    requiredLetter: firstLetter(SEED_ATHLETE.lastName),
+    seedAthlete: usedSeedAthlete,
+    requiredLetter: firstLetter(seedAthlete.lastName),
     direction: "clockwise",
-    usedAthletes: [toUsedAthlete(SEED_ATHLETE)],
+    usedAthletes: [usedSeedAthlete],
     turnSeconds,
     status: "in_progress",
     winnerId: null,

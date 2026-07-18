@@ -2,6 +2,10 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 
+import GameClientView, {
+  type HistoryEntry,
+} from "./game-client-view";
+
 import {
   createGame,
   type GameState,
@@ -21,28 +25,25 @@ type LookupAthlete = {
   isNickname: boolean;
 };
 
-type HistoryEntry = {
-  id: number;
-  player: string;
-  answer: string;
-  detail: string;
-  valid: boolean;
+type PendingSuggestion = {
+  athlete: LookupAthlete;
+  submittedName: string;
+  playerName: string;
+  turnNumber: number;
 };
 
-type Suggestion = { displayName: string; sport: string };
-
 const reasonLabels: Record<InvalidReason, string> = {
-  game_finished: "The game has already finished.",
-  athlete_not_found: "That athlete is not in the current catalog.",
-  missing_full_name: "Enter both a first and last name.",
-  wrong_initial: "The first name starts with the wrong letter.",
-  not_professional: "That person is not marked as a professional athlete.",
-  nickname_not_allowed: "Nicknames are not allowed.",
-  already_used: "That athlete has already been used.",
+  game_finished: "game is over",
+  athlete_not_found: "who is that?",
+  missing_full_name: "need a first and last name",
+  wrong_initial: "he first name starts with the wrong letter",
+  not_professional: "that person is not marked as a professional athlete.",
+  nickname_not_allowed: "nicknames are not allowed (yet)",
+  already_used: "this athlete has already been used.",
 };
 
 export default function GameClient() {
-  const [playerNames, setPlayerNames] = useState(["Player 1", "Player 2"]);
+  const [playerNames, setPlayerNames] = useState(["", ""]);
   const [lives, setLives] = useState(3);
   const [turnSeconds, setTurnSeconds] = useState(30);
   const [game, setGame] = useState<GameState | null>(null);
@@ -51,7 +52,7 @@ export default function GameClient() {
   const [feedback, setFeedback] = useState("");
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [pendingSuggestion, setPendingSuggestion] = useState<PendingSuggestion | null>(null);
   const gameRef = useRef<GameState | null>(null);
   const resolvingRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -61,35 +62,7 @@ export default function GameClient() {
   }, [game]);
 
   useEffect(() => {
-    if (!game || game.status === "finished" || !answer.trim()) {
-      return;
-    }
-
-    const controller = new AbortController();
-    const timer = window.setTimeout(async () => {
-      try {
-        const params = new URLSearchParams({ q: answer, letter: game.requiredLetter });
-        const response = await fetch(`/api/athletes/lookup?${params}`, {
-          signal: controller.signal,
-        });
-        if (!response.ok) return;
-        const data = (await response.json()) as { suggestions: Suggestion[] };
-        setSuggestions(data.suggestions);
-      } catch (error) {
-        if (!(error instanceof DOMException && error.name === "AbortError")) {
-          setSuggestions([]);
-        }
-      }
-    }, 160);
-
-    return () => {
-      window.clearTimeout(timer);
-      controller.abort();
-    };
-  }, [answer, game]);
-
-  useEffect(() => {
-    if (!game || game.status === "finished") return;
+    if (!game || game.status === "finished" || pendingSuggestion) return;
     resolvingRef.current = false;
     let remaining = game.turnSeconds;
     inputRef.current?.focus();
@@ -107,13 +80,21 @@ export default function GameClient() {
         snapshot.status === "finished" ||
         snapshot.turnNumber !== turnNumber ||
         resolvingRef.current
-      ) return;
+      ) {
+        return;
+      }
 
       resolvingRef.current = true;
       const playerName = snapshot.players[snapshot.currentPlayerIndex].name;
       const result = timeoutTurn(snapshot);
       setHistory((entries) => [
-        { id: Date.now(), player: playerName, answer: "Time expired", detail: "Lost one life", valid: false },
+        {
+          id: Date.now(),
+          player: playerName,
+          answer: "Time expired",
+          detail: "Lost one life",
+          valid: false,
+        },
         ...entries,
       ]);
       setFeedback(`${playerName} ran out of time and lost one life.`);
@@ -123,47 +104,80 @@ export default function GameClient() {
     }, 1000);
 
     return () => window.clearInterval(timer);
-  }, [game]);
+  }, [game, pendingSuggestion]);
 
   function updatePlayer(index: number, value: string) {
-    setPlayerNames((names) => names.map((name, position) => (position === index ? value : name)));
+    setPlayerNames((names) =>
+      names.map((name, position) => (position === index ? value : name)),
+    );
   }
 
   function addPlayer() {
-    setPlayerNames((names) => [...names, `Player ${names.length + 1}`]);
+    setPlayerNames((names) => [...names, ""]);
   }
 
   function removePlayer(index: number) {
     setPlayerNames((names) => names.filter((_, position) => position !== index));
   }
 
-  function startGame(event: FormEvent) {
+  async function fetchRandomSeedAthlete(): Promise<LookupAthlete> {
+    const response = await fetch("/api/athletes/lookup?random=1");
+    if (!response.ok) {
+      throw new Error("Random athlete lookup failed.");
+    }
+
+    const data = (await response.json()) as { athlete?: LookupAthlete | null };
+    if (!data.athlete) {
+      throw new Error("Random athlete lookup returned no athlete.");
+    }
+
+    return data.athlete;
+  }
+
+  async function startGame(event: FormEvent) {
     event.preventDefault();
     try {
-      const nextGame = createGame(playerNames, { lives, turnSeconds });
+      const seedAthlete = await fetchRandomSeedAthlete();
+      const nextGame = createGame(playerNames, {
+        lives,
+        turnSeconds,
+        seedAthlete,
+      });
       setGame(nextGame);
       setSecondsLeft(nextGame.turnSeconds);
       setHistory([]);
-      setFeedback("Pete Rose sets the opening letter: R.");
+      setFeedback(
+        `${seedAthlete.displayName} starts the game. Opening letter: ${nextGame.requiredLetter}.`,
+      );
       setAnswer("");
+      setPendingSuggestion(null);
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : "Unable to start the game.");
     }
   }
 
-  function startQuickTest() {
-    const nextGame = createGame(["Player 1", "Player 2"], {
-      lives: 3,
-      turnSeconds: 30,
-    });
-    setPlayerNames(["Player 1", "Player 2"]);
-    setLives(3);
-    setTurnSeconds(30);
-    setGame(nextGame);
-    setSecondsLeft(30);
-    setHistory([]);
-    setFeedback("Quick test started. Pete Rose sets the opening letter: R.");
-    setAnswer("");
+  async function startQuickTest() {
+    try {
+      const seedAthlete = await fetchRandomSeedAthlete();
+      const nextGame = createGame(["Player 1", "Player 2"], {
+        lives: 3,
+        turnSeconds: 30,
+        seedAthlete,
+      });
+      setPlayerNames(["Player 1", "Player 2"]);
+      setLives(3);
+      setTurnSeconds(30);
+      setGame(nextGame);
+      setSecondsLeft(30);
+      setHistory([]);
+      setFeedback(
+        `Quick test started with ${seedAthlete.displayName}. Opening letter: ${nextGame.requiredLetter}.`,
+      );
+      setAnswer("");
+      setPendingSuggestion(null);
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "Unable to start the quick test.");
+    }
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -180,10 +194,28 @@ export default function GameClient() {
       const response = await fetch("/api/athletes/lookup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: submittedName }),
+        body: JSON.stringify({
+          name: submittedName,
+          requiredLetter: snapshot.requiredLetter,
+        }),
       });
       if (!response.ok) throw new Error("Athlete lookup failed.");
-      const data = (await response.json()) as { athlete: LookupAthlete | null };
+      const data = (await response.json()) as {
+        athlete: LookupAthlete | null;
+        suggestion?: LookupAthlete | null;
+      };
+      if (!data.athlete && data.suggestion) {
+        setPendingSuggestion({
+          athlete: data.suggestion,
+          submittedName,
+          playerName,
+          turnNumber: snapshot.turnNumber,
+        });
+        setFeedback(`Did you mean ${data.suggestion.displayName}?`);
+        resolvingRef.current = false;
+        return;
+      }
+
       const result = data.athlete
         ? submitAthlete(snapshot, data.athlete)
         : rejectTurn(snapshot, "athlete_not_found");
@@ -214,7 +246,7 @@ export default function GameClient() {
     ]);
     setFeedback(valid ? `${athlete?.displayName} is valid. Next letter: ${result.state.requiredLetter}.` : detail);
     setAnswer("");
-    setSuggestions([]);
+    setPendingSuggestion(null);
     setSecondsLeft(result.state.turnSeconds);
     setGame(result.state);
   }
@@ -224,73 +256,78 @@ export default function GameClient() {
     setHistory([]);
     setFeedback("");
     setAnswer("");
+    setPendingSuggestion(null);
   }
 
-  if (!game) {
-    return (
-      <main className="setup-shell">
-        <section className="intro-panel">
-          <div className="brand-mark">PR</div>
-          <p className="eyebrow">The name-chain elimination game</p>
-          <h1>Pete Rose</h1>
-          {/* <p className="intro-copy">Name a pro athlete whose first name begins with the last name before it. Miss once, lose a life.</p>
-          <div className="chain-preview" aria-label="Example play sequence">
-            <span>Pete <b>Rose</b></span><i>R</i><span><b>R</b>asheed Wallace</span><i>W</i><span><b>W</b>alter Payton</span>
-          </div> */}
-        </section>
+  function acceptSuggestedAthlete() {
+    const snapshot = gameRef.current;
+    if (
+      !snapshot ||
+      !pendingSuggestion ||
+      snapshot.status === "finished" ||
+      snapshot.turnNumber !== pendingSuggestion.turnNumber
+    ) {
+      setPendingSuggestion(null);
+      return;
+    }
 
-        <section className="setup-card">
-          <p className="step-label">Game setup</p>
-          <h2>Who&apos;s playing?</h2>
-          <form onSubmit={startGame}>
-            <div className="player-inputs">
-              {playerNames.map((name, index) => (
-                <div className="player-row" key={index}>
-                  <span>{index + 1}</span>
-                  <input aria-label={`Player ${index + 1} name`} value={name} onChange={(event) => updatePlayer(index, event.target.value)} maxLength={24} />
-                  {playerNames.length > 2 && <button type="button" className="remove-button" onClick={() => removePlayer(index)} aria-label={`Remove ${name}`}>×</button>}
-                </div>
-              ))}
-            </div>
-            <button className="add-button" type="button" onClick={addPlayer} disabled={playerNames.length >= 8}>+ Add player</button>
-            <div className="settings-row">
-              <label>Lives<select value={lives} onChange={(event) => setLives(Number(event.target.value))}><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label>
-              <label>Turn time<select value={turnSeconds} onChange={(event) => setTurnSeconds(Number(event.target.value))}><option value="15">15 sec</option><option value="30">30 sec</option><option value="45">45 sec</option><option value="60">60 sec</option></select></label>
-            </div>
-            {feedback && <p className="form-error">{feedback}</p>}
-            <button className="primary-button" type="submit">Start the game <span>→</span></button>
-            <button className="quick-test-button" type="button" onClick={startQuickTest}>Quick test with 2 players</button>
-          </form>
-        </section>
-      </main>
+    resolvingRef.current = true;
+    const result = submitAthlete(snapshot, pendingSuggestion.athlete);
+    recordResult(
+      result,
+      pendingSuggestion.playerName,
+      pendingSuggestion.athlete.displayName,
+      pendingSuggestion.athlete,
     );
   }
 
-  const currentPlayer = game.players[game.currentPlayerIndex];
-  const winner = game.players.find((player) => player.id === game.winnerId);
-  const timerPercent = Math.max(0, (secondsLeft / game.turnSeconds) * 100);
+  function rejectSuggestedAthlete() {
+    setPendingSuggestion(null);
+    setFeedback("Edit the name and try again.");
+    inputRef.current?.focus();
+  }
+
+  const currentPlayerName = game ? game.players[game.currentPlayerIndex].name : null;
+  const winnerName = game
+    ? game.players.find((player) => player.id === game.winnerId)?.name ?? null
+    : null;
+  const seedName = game
+    ? `${game.seedAthlete.firstName} ${game.seedAthlete.lastName}`
+    : null;
+  const timerPercent = game ? Math.max(0, (secondsLeft / game.turnSeconds) * 100) : 0;
 
   return (
-    <main className="game-shell">
-      <header className="game-header"><div className="mini-brand"><span>PR</span><strong>Pete Rose</strong></div><div className="header-meta"><span>Round {game.turnNumber}</span><span>{game.direction === "clockwise" ? "↻ Clockwise" : "↺ Counterclockwise"}</span><button onClick={resetGame}>New game</button></div></header>
-
-      {game.status === "finished" ? (
-        <section className="winner-card"><p className="eyebrow">Last player standing</p><div className="trophy">★</div><h1>{winner?.name} wins</h1><p>Strong names. Better memory. The chain ends here.</p><button className="primary-button" onClick={resetGame}>Play again <span>→</span></button></section>
-      ) : (
-        <div className="game-grid">
-          <aside className="scoreboard"><p className="section-kicker">Players</p>{game.players.map((player, index) => <div className={`score-row ${index === game.currentPlayerIndex ? "active" : ""} ${player.eliminated ? "eliminated" : ""}`} key={player.id}><div className="avatar">{player.name.charAt(0).toUpperCase()}</div><div><strong>{player.name}</strong><small>{player.eliminated ? "Eliminated" : index === game.currentPlayerIndex ? "Up now" : "Waiting"}</small></div><div className="lives" aria-label={`${player.lives} lives`}>{Array.from({ length: lives }, (_, heart) => <span className={heart >= player.lives ? "lost" : ""} key={heart}>♥</span>)}</div></div>)}</aside>
-
-          <section className="turn-card">
-            <div className="turn-top"><div><p className="section-kicker">{currentPlayer.name}&apos;s turn</p><p className="prompt">Name an athlete starting with</p></div><div className={`timer ${secondsLeft <= 5 ? "danger" : ""}`}><strong>{secondsLeft}</strong><small>seconds</small></div></div>
-            <div className="letter-display">{game.requiredLetter}</div>
-            <form className="answer-form" onSubmit={handleSubmit}><label htmlFor="athlete-answer">Professional athlete&apos;s full name</label><div className="autocomplete"><div className="answer-row"><input id="athlete-answer" ref={inputRef} value={answer} onChange={(event) => { setAnswer(event.target.value); setSuggestions([]); }} placeholder={`${game.requiredLetter}...`} autoComplete="off" disabled={submitting} role="combobox" aria-autocomplete="list" aria-expanded={suggestions.length > 0} aria-controls="athlete-suggestions" /><button type="submit" disabled={!answer.trim() || submitting}>{submitting ? "Checking…" : "Lock it in"}</button></div>{suggestions.length > 0 && <div className="suggestions" id="athlete-suggestions" role="listbox">{suggestions.map((suggestion) => <button type="button" role="option" aria-selected="false" key={suggestion.displayName} onClick={() => { setAnswer(suggestion.displayName); setSuggestions([]); inputRef.current?.focus(); }}><strong>{suggestion.displayName}</strong><span>{suggestion.sport}</span></button>)}</div>}</div></form>
-            <div className="timer-track"><span style={{ width: `${timerPercent}%` }} /></div>
-            <p className="feedback" aria-live="polite">{feedback}</p>
-          </section>
-
-          <aside className="history-panel"><p className="section-kicker">Name chain</p><div className="history-list">{history.map((entry) => <div className={`history-item ${entry.valid ? "valid" : "invalid"}`} key={entry.id}><span>{entry.valid ? "✓" : "×"}</span><div><strong>{entry.answer}</strong><small>{entry.player} · {entry.detail}</small></div></div>)}<div className="history-item seed"><span>●</span><div><strong>Pete Rose</strong><small>The seed · Baseball</small></div></div></div></aside>
-        </div>
-      )}
-    </main>
+    <GameClientView
+      answer={answer}
+      currentPlayerName={currentPlayerName}
+      feedback={feedback}
+      game={game}
+      history={history}
+      inputRef={inputRef}
+      lives={lives}
+      playerNames={playerNames}
+      seedName={seedName}
+      secondsLeft={secondsLeft}
+      submitting={submitting}
+      timerPercent={timerPercent}
+      turnSeconds={turnSeconds}
+      winnerName={winnerName}
+      onAddPlayer={addPlayer}
+      onAnswerChange={(value) => {
+        setAnswer(value);
+        setPendingSuggestion(null);
+      }}
+      onAcceptSuggestion={acceptSuggestedAthlete}
+      onLivesChange={setLives}
+      onPlayerChange={updatePlayer}
+      onQuickTest={startQuickTest}
+      onRejectSuggestion={rejectSuggestedAthlete}
+      onRemovePlayer={removePlayer}
+      onResetGame={resetGame}
+      onStartGame={startGame}
+      onSubmitAnswer={handleSubmit}
+      pendingSuggestionName={pendingSuggestion?.athlete.displayName ?? null}
+      onTurnSecondsChange={setTurnSeconds}
+    />
   );
 }

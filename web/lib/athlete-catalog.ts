@@ -61,6 +61,39 @@ export class AthleteCatalog {
       .slice(0, limit);
   }
 
+  findClosest(fullName: string, requiredLetter?: string): AthleteRecord | null {
+    const normalizedQuery = normalizeName(fullName);
+    if (!normalizedQuery) return null;
+
+    const required = requiredLetter?.trim().toLocaleUpperCase("en-US");
+    let bestMatch: AthleteRecord | null = null;
+    let bestDistance = Number.POSITIVE_INFINITY;
+
+    for (const athlete of this.athletes) {
+      if (
+        required &&
+        athlete.firstName.charAt(0).toLocaleUpperCase("en-US") !== required
+      ) {
+        continue;
+      }
+
+      const distance = levenshteinDistance(
+        normalizedQuery,
+        normalizeName(athlete.displayName),
+      );
+
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestMatch = athlete;
+      }
+    }
+
+    if (!bestMatch) return null;
+
+    const maxDistance = normalizedQuery.length <= 8 ? 2 : 3;
+    return bestDistance <= maxDistance ? bestMatch : null;
+  }
+
   toSubmission(fullName: string): AthleteSubmission | null {
     const athlete = this.find(fullName);
     if (!athlete) return null;
@@ -71,6 +104,15 @@ export class AthleteCatalog {
       isProfessional: athlete.isProfessional,
       isNickname: athlete.isNickname,
     };
+  }
+
+  random(): AthleteRecord {
+    if (this.athletes.length === 0) {
+      throw new Error("Athlete catalog is empty.");
+    }
+
+    const index = Math.floor(Math.random() * this.athletes.length);
+    return this.athletes[index];
   }
 
   static fromCsv(csv: string): AthleteCatalog {
@@ -123,6 +165,32 @@ function parseBoolean(value: string, line: number, column: string): boolean {
 
 function normalizeName(value: string): string {
   return value.trim().replace(/\s+/g, " ").toLocaleLowerCase("en-US");
+}
+
+function levenshteinDistance(left: string, right: string): number {
+  if (left === right) return 0;
+  if (left.length === 0) return right.length;
+  if (right.length === 0) return left.length;
+
+  const previousRow = Array.from({ length: right.length + 1 }, (_, index) => index);
+
+  for (let leftIndex = 0; leftIndex < left.length; leftIndex += 1) {
+    let previousDiagonal = previousRow[0];
+    previousRow[0] = leftIndex + 1;
+
+    for (let rightIndex = 0; rightIndex < right.length; rightIndex += 1) {
+      const temp = previousRow[rightIndex + 1];
+      const substitutionCost = left[leftIndex] === right[rightIndex] ? 0 : 1;
+      previousRow[rightIndex + 1] = Math.min(
+        previousRow[rightIndex + 1] + 1,
+        previousRow[rightIndex] + 1,
+        previousDiagonal + substitutionCost,
+      );
+      previousDiagonal = temp;
+    }
+  }
+
+  return previousRow[right.length];
 }
 
 /** Parses standard CSV quoting, including commas and escaped quotes in fields. */
