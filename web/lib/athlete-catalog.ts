@@ -2,22 +2,29 @@ import type { AthleteSubmission } from "./game-engine";
 
 export interface AthleteRecord {
   id: string;
+  importId: number;
   firstName: string;
   lastName: string;
   displayName: string;
+  normalizedName: string;
   sport: string;
   isProfessional: boolean;
   isNickname: boolean;
+  alternateNames: string[];
+  needsReview: boolean;
 }
 
 const EXPECTED_HEADERS = [
-  "id",
+  "import_id",
   "first_name",
   "last_name",
   "display_name",
+  "normalized_name",
   "sport",
   "is_professional",
   "is_nickname",
+  "alternate_names",
+  "needs_review",
 ] as const;
 
 export class AthleteCatalog {
@@ -27,7 +34,7 @@ export class AthleteCatalog {
     this.athletesByName = new Map();
 
     for (const athlete of athletes) {
-      const key = normalizeName(athlete.displayName);
+      const key = athlete.normalizedName;
       if (this.athletesByName.has(key)) {
         throw new Error(`Duplicate athlete name: ${athlete.displayName}`);
       }
@@ -131,25 +138,48 @@ export class AthleteCatalog {
     const athletes = rows.slice(1).map((row, index) => {
       const lineNumber = index + 2;
       if (row.length !== EXPECTED_HEADERS.length) {
-        throw new Error(`CSV line ${lineNumber} has ${row.length} columns; expected 7.`);
+        throw new Error(`CSV line ${lineNumber} has ${row.length} columns; expected 10.`);
       }
 
-      const [id, firstName, lastName, displayName, sport, professional, nickname] =
-        row.map((value) => value.trim());
-      if (!id || !firstName || !lastName || !displayName || !sport) {
-        throw new Error(`CSV line ${lineNumber} has a missing required value.`);
-      }
-      if (seenIds.has(id)) throw new Error(`Duplicate athlete id: ${id}`);
-      seenIds.add(id);
-
-      return {
-        id,
+      const [
+        importId,
         firstName,
         lastName,
         displayName,
+        normalizedName,
+        sport,
+        professional,
+        nickname,
+        alternateNames,
+        needsReview,
+      ] =
+        row.map((value) => value.trim());
+      if (
+        !importId ||
+        !firstName ||
+        !lastName ||
+        !displayName ||
+        !normalizedName ||
+        !sport
+      ) {
+        throw new Error(`CSV line ${lineNumber} has a missing required value.`);
+      }
+      const parsedImportId = parseImportId(importId, lineNumber);
+      if (seenIds.has(importId)) throw new Error(`Duplicate athlete id: ${importId}`);
+      seenIds.add(importId);
+
+      return {
+        id: importId,
+        importId: parsedImportId,
+        firstName,
+        lastName,
+        displayName,
+        normalizedName: normalizeName(normalizedName),
         sport,
         isProfessional: parseBoolean(professional, lineNumber, "is_professional"),
         isNickname: parseBoolean(nickname, lineNumber, "is_nickname"),
+        alternateNames: parseAlternateNames(alternateNames),
+        needsReview: parseBoolean(needsReview, lineNumber, "needs_review"),
       };
     });
 
@@ -157,10 +187,30 @@ export class AthleteCatalog {
   }
 }
 
+function parseImportId(value: string, line: number): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new Error(`CSV line ${line} has invalid import_id: ${value}`);
+  }
+  return parsed;
+}
+
 function parseBoolean(value: string, line: number, column: string): boolean {
   if (value === "true") return true;
   if (value === "false") return false;
   throw new Error(`CSV line ${line} has invalid ${column}: ${value}`);
+}
+
+function parseAlternateNames(value: string): string[] {
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === "{}") return [];
+  if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) return [];
+
+  return trimmed
+    .slice(1, -1)
+    .split(",")
+    .map((entry) => entry.trim().replace(/^"(.*)"$/, "$1"))
+    .filter(Boolean);
 }
 
 function normalizeName(value: string): string {

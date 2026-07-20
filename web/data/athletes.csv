@@ -1,21 +1,41 @@
-id,first_name,last_name,display_name,sport,is_professional,is_nickname
-1,Rasheed,Wallace,Rasheed Wallace,Basketball,true,false
-2,Walter,Payton,Walter Payton,Football,true,false
-3,Serena,Williams,Serena Williams,Tennis,true,false
-4,Wayne,Gretzky,Wayne Gretzky,Hockey,true,false
-5,Giannis,Antetokounmpo,Giannis Antetokounmpo,Basketball,true,false
-6,Alex,Rodriguez,Alex Rodriguez,Baseball,true,false
-7,Roger,Federer,Roger Federer,Tennis,true,false
-8,Freddie,Freeman,Freddie Freeman,Baseball,true,false
-9,Floyd,Mayweather,Floyd Mayweather,Boxing,true,false
-10,Mia,Hamm,Mia Hamm,Soccer,true,false
-11,Hank,Aaron,Hank Aaron,Baseball,true,false
-12,Aaron,Rodgers,Aaron Rodgers,Football,true,false
-13,Rafael,Nadal,Rafael Nadal,Tennis,true,false
-14,Naomi,Osaka,Naomi Osaka,Tennis,true,false
-15,Oscar,Robertson,Oscar Robertson,Basketball,true,false
-16,Reggie,Jackson,Reggie Jackson,Baseball,true,false
-17,Jackie,Robinson,Jackie Robinson,Baseball,true,false
-18,Russell,Wilson,Russell Wilson,Football,true,false
-19,Wilt,Chamberlain,Wilt Chamberlain,Basketball,true,false
-20,Cristiano,Ronaldo,Cristiano Ronaldo,Soccer,true,false
+import_id,first_name,last_name,display_name,normalized_name,sport,is_professional,is_nickname,alternate_names,needs_review
+1,Rasheed,Wallace,Rasheed Wallace,rasheed wallace,Basketball,true,false,{},false
+2,Walter,Payton,Walter Payton,walter payton,Football,true,false,{},false
+3,Serena,Williams,Serena Williams,serena williams,Tennis,true,false,{},false
+4,Wayne,Gretzky,Wayne Gretzky,wayne gretzky,Hockey,true,false,{},false
+5,Giannis,Antetokounmpo,Giannis Antetokounmpo,giannis antetokounmpo,Basketball,true,false,{},false
+6,Alex,Rodriguez,Alex Rodriguez,alex rodriguez,Baseball,true,false,{},false
+7,Roger,Federer,Roger Federer,roger federer,Tennis,true,false,{},false
+8,Freddie,Freeman,Freddie Freeman,freddie freeman,Baseball,true,false,{},false
+9,Floyd,Mayweather,Floyd Mayweather,floyd mayweather,Boxing,true,false,{},false
+10,Mia,Hamm,Mia Hamm,mia hamm,Soccer,true,false,{},false
+11,Hank,Aaron,Hank Aaron,hank aaron,Baseball,true,false,{},false
+12,Aaron,Rodgers,Aaron Rodgers,aaron rodgers,Football,true,false,{},false
+13,Rafael,Nadal,Rafael Nadal,rafael nadal,Tennis,true,false,{},false
+14,Naomi,Osaka,Naomi Osaka,naomi osaka,Tennis,true,false,{},false
+15,Oscar,Robertson,Oscar Robertson,oscar robertson,Basketball,true,false,{},false
+16,Reggie,Jackson,Reggie Jackson,reggie jackson,Baseball,true,false,{},false
+17,Jackie,Robinson,Jackie Robinson,jackie robinson,Baseball,true,false,{},false
+18,Russell,Wilson,Russell Wilson,russell wilson,Football,true,false,{},false
+19,Wilt,Chamberlain,Wilt Chamberlain,wilt chamberlain,Basketball,true,false,{},false
+20,Cristiano,Ronaldo,Cristiano Ronaldo,cristiano ronaldo,Soccer,true,false,{"CR7"},false
+21,LeBron,James,LeBron James,lebron james,Basketball,true,false,"{""King James""}",false
+22,Stephen,Curry,Stephen Curry,stephen curry,Basketball,true,false,"{""Steph Curry""}",false
+23,Michael,Jordan,Michael Jordan,michael jordan,Basketball,true,false,"{""MJ""}",false
+24,Larry,Bird,Larry Bird,larry bird,Basketball,true,false,{},false
+25,Patrick,Mahomes,Patrick Mahomes,patrick mahomes,Football,true,false,{},false
+26,Tom,Brady,Tom Brady,tom brady,Football,true,false,"{""TB12""}",false
+27,Jerry,Rice,Jerry Rice,jerry rice,Football,true,false,{},false
+28,Barry,Sanders,Barry Sanders,barry sanders,Football,true,false,{},false
+29,Shohei,Ohtani,Shohei Ohtani,shohei ohtani,Baseball,true,false,{},false
+30,Derek,Jeter,Derek Jeter,derek jeter,Baseball,true,false,{},false
+31,Ken,Griffey Jr.,Ken Griffey Jr.,ken griffey jr,Baseball,true,false,"{""Ken Griffey Junior""}",false
+32,Cal,Ripken Jr.,Cal Ripken Jr.,cal ripken jr,Baseball,true,false,"{""Cal Ripken Junior""}",false
+33,Lionel,Messi,Lionel Messi,lionel messi,Soccer,true,false,"{""Leo Messi""}",false
+34,Kylian,Mbappé,Kylian Mbappé,kylian mbappe,Soccer,true,false,"{""Kylian Mbappe""}",false
+35,David,Beckham,David Beckham,david beckham,Soccer,true,false,{},false
+36,Sidney,Crosby,Sidney Crosby,sidney crosby,Hockey,true,false,"{""Sid the Kid""}",false
+37,Connor,McDavid,Connor McDavid,connor mcdavid,Hockey,true,false,{},false
+38,Alexander,Ovechkin,Alexander Ovechkin,alexander ovechkin,Hockey,true,false,"{""Alex Ovechkin"",""Ovi""}",false
+39,Novak,Djokovic,Novak Djokovic,novak djokovic,Tennis,true,false,{},false
+40,Muhammad,Ali,Muhammad Ali,muhammad ali,Boxing,true,false,"{""Cassius Clay""}",false

@@ -14,12 +14,16 @@ describe("AthleteCatalog", () => {
     assert.equal(catalog.athletes.length, 20);
     assert.deepEqual(catalog.find("  rasheed   WALLACE "), {
       id: "1",
+      importId: 1,
       firstName: "Rasheed",
       lastName: "Wallace",
       displayName: "Rasheed Wallace",
+      normalizedName: "rasheed wallace",
       sport: "Basketball",
       isProfessional: true,
       isNickname: false,
+      alternateNames: [],
+      needsReview: false,
     });
   });
 
@@ -69,11 +73,15 @@ describe("AthleteCatalog", () => {
     assert.deepEqual(catalog.suggest("Wayne", "R"), []);
   });
 
-  it("rejects invalid headers and boolean values", () => {
+  it("rejects invalid headers and typed values", () => {
     assert.throws(() => AthleteCatalog.fromCsv("name\nRasheed Wallace"), /headers/);
     assert.throws(
-      () => AthleteCatalog.fromCsv(csv.replace(",true,false", ",yes,false")),
+      () => AthleteCatalog.fromCsv(csv.replace(",true,false,{},false", ",yes,false,{},false")),
       /invalid is_professional/,
+    );
+    assert.throws(
+      () => AthleteCatalog.fromCsv(csv.replace("import_id", "source_row_id")),
+      /headers/,
     );
   });
 });
