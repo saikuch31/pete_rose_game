@@ -44,4 +44,7 @@ next-env.d.ts
 
 # esoretep7667!! is the password for the supabase project
 
-players.csv
+
+/data
+
+.csv*
