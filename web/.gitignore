@@ -42,9 +42,4 @@ yarn-error.log*
 next-env.d.ts
 
 
-# esoretep7667!! is the password for the supabase project
-
-
-/data
-
-.csv*
+*.csv
