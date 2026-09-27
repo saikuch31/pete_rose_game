@@ -1,36 +1,35 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { NextResponse } from "next/server";
 
-import { AthleteCatalog } from "@/lib/athlete-catalog";
+import { loadAthleteCatalog } from "@/lib/load-athlete-catalog";
 
-const catalog = AthleteCatalog.fromCsv(
-  readFileSync(join(process.cwd(), "data", "athletes.csv"), "utf8"),
-);
+export async function GET(request: Request) {
+  try {
+    const catalog = await loadAthleteCatalog();
+    const { searchParams } = new URL(request.url);
+    if (searchParams.get("random") === "1") {
+      const athlete = catalog.random();
+      return NextResponse.json({
+        athlete: {
+          firstName: athlete.firstName,
+          lastName: athlete.lastName,
+          displayName: athlete.displayName,
+          sport: athlete.sport,
+          isProfessional: athlete.isProfessional,
+          isNickname: athlete.isNickname,
+        },
+      });
+    }
 
-export function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  if (searchParams.get("random") === "1") {
-    const athlete = catalog.random();
-    return NextResponse.json({
-      athlete: {
-        firstName: athlete.firstName,
-        lastName: athlete.lastName,
-        displayName: athlete.displayName,
-        sport: athlete.sport,
-        isProfessional: athlete.isProfessional,
-        isNickname: athlete.isNickname,
-      },
-    });
+    const query = searchParams.get("q") ?? "";
+    const letter = searchParams.get("letter") ?? undefined;
+    const suggestions = catalog.suggest(query, letter).map((athlete) => ({
+      displayName: athlete.displayName,
+      sport: athlete.sport,
+    }));
+    return NextResponse.json({ suggestions });
+  } catch {
+    return NextResponse.json({ error: "Athlete lookup is unavailable." }, { status: 503 });
   }
-
-  const query = searchParams.get("q") ?? "";
-  const letter = searchParams.get("letter") ?? undefined;
-  const suggestions = catalog.suggest(query, letter).map((athlete) => ({
-    displayName: athlete.displayName,
-    sport: athlete.sport,
-  }));
-  return NextResponse.json({ suggestions });
 }
 
 export async function POST(request: Request) {
@@ -53,24 +52,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "A full athlete name is required." }, { status: 400 });
   }
 
-  const athlete = catalog.find(name);
-  if (!athlete) {
-    const closest = catalog.findClosest(
-      name,
-      typeof requiredLetter === "string" ? requiredLetter : undefined,
-    );
-    return NextResponse.json({ athlete: null, suggestion: closest });
-  }
+  try {
+    const catalog = await loadAthleteCatalog();
+    const athlete = catalog.find(name);
+    if (!athlete) {
+      const closest = catalog.findClosest(
+        name,
+        typeof requiredLetter === "string" ? requiredLetter : undefined,
+      );
+      return NextResponse.json({ athlete: null, suggestion: closest });
+    }
 
-  return NextResponse.json({
-    athlete: {
-      firstName: athlete.firstName,
-      lastName: athlete.lastName,
-      displayName: athlete.displayName,
-      sport: athlete.sport,
-      isProfessional: athlete.isProfessional,
-      isNickname: athlete.isNickname,
-    },
-    suggestion: null,
-  });
+    return NextResponse.json({
+      athlete: {
+        firstName: athlete.firstName,
+        lastName: athlete.lastName,
+        displayName: athlete.displayName,
+        sport: athlete.sport,
+        isProfessional: athlete.isProfessional,
+        isNickname: athlete.isNickname,
+      },
+      suggestion: null,
+    });
+  } catch {
+    return NextResponse.json({ error: "Athlete lookup is unavailable." }, { status: 503 });
+  }
 }

@@ -2,7 +2,20 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+Athlete lookups use the Supabase `athletes` table with the same columns as
+`data/athletes.csv`. Set these in `.env.local` (or your deployment environment):
+
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+```
+
+The publishable key needs read access to the table through its grants and RLS
+policies. Runtime lookups load the catalog from Supabase; the CSV is retained
+only as a test fixture. Random selection, suggestions, and typo matching keep
+their existing behavior.
+
+Then run the development server:
 
 ```bash
 npm run dev

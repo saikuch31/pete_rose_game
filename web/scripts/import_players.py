@@ -321,7 +321,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--players",
         type=Path,
-        default=DATA_DIR / "sample.csv",
+        default=DATA_DIR / "sample.csvh",
         help="Path to Null_positions.csv",
     )
 

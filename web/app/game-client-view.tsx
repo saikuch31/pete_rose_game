@@ -1,4 +1,4 @@
-import { type FormEvent, useId, type RefObject } from "react";
+import { type FormEvent, useId, useRef, type RefObject } from "react";
 
 import type { GameState } from "@/lib/game-engine";
 
@@ -39,6 +39,53 @@ type GameClientViewProps = {
   onSubmitAnswer: (event: FormEvent) => void;
   onTurnSecondsChange: (value: number) => void;
 };
+
+function PlayerHistory({ history }: { history: HistoryEntry[] }) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  const moves = [...history].reverse();
+
+  return (
+    <>
+      <button className="player-history-button" type="button" onClick={() => dialogRef.current?.showModal()}>
+        Player history
+      </button>
+      <dialog
+        ref={dialogRef}
+        className="player-history-dialog"
+        aria-labelledby={titleId}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) dialogRef.current?.close();
+        }}
+      >
+        <div className="player-history-content">
+          <h2 id={titleId}>Player history</h2>
+          <div className="player-history-scroll" tabIndex={0} role="region" aria-label="Moves in turn order">
+            {moves.length === 0 ? (
+              <p>No moves this game.</p>
+            ) : (
+              <ol className="player-history-list">
+                {moves.map((entry, index) => (
+                  <li className={`player-history-move ${entry.valid ? "valid" : "invalid"}`} key={entry.id}>
+                    <span className="player-history-number">{String(index + 1).padStart(2, "0")}</span>
+                    <div>
+                      <small>{entry.player}</small>
+                      <strong>{entry.answer}</strong>
+                      <span>{entry.valid ? "✓" : "×"} {entry.detail}</span>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
+          <button className="primary-button" type="button" onClick={() => dialogRef.current?.close()}>
+            Return
+          </button>
+        </div>
+      </dialog>
+    </>
+  );
+}
 
 function CornerLogo() {
   const pathId = useId().replaceAll(":", "");
@@ -201,14 +248,17 @@ export default function GameClientView({
 
       {game.status === "finished" ? (
         <section className="winner-card">
-          <p className="eyebrow">Last player standing</p>
-          <div className="trophy">01</div>
-          <h1> nice job, {winnerName} </h1>
-          <p>you won!</p>
-          <button className="primary-button" onClick={onResetGame}>
-            Play again
-            <span>↵</span>
-          </button>
+          <div className="winner-summary">
+            <p className="eyebrow">Last player standing</p>
+            <div className="trophy">01</div>
+            <h1> nice job, {winnerName} </h1>
+            <p>you won!</p>
+            <button className="primary-button" onClick={onResetGame}>
+              Play again
+              <span>↵</span>
+            </button>
+          </div>
+          <PlayerHistory history={history} />
         </section>
       ) : (
         <div className="game-grid">
